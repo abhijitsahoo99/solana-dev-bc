@@ -11,17 +11,23 @@ const votingAddress = new PublicKey(
 );
 
 describe("votingdapp", () => {
-  it("Initialize Votingdapp", async () => {
-    const context = await startAnchor(
+  let context: Awaited<ReturnType<typeof startAnchor>>;
+  let provider: BankrunProvider;
+  let votingProgram: Program<Votingdapp>;
+
+  beforeAll(async () => {
+    context = await startAnchor(
       "",
       [{ name: "votingdapp", programId: votingAddress }],
       []
     );
 
-    const provider = new BankrunProvider(context);
+    provider = new BankrunProvider(context);
 
-    const votingProgram = new Program<Votingdapp>(IDL, provider);
+    votingProgram = new Program<Votingdapp>(IDL, provider);
+  });
 
+  it("Initialize Votingdapp", async () => {
     await votingProgram.methods
       .initializePoll(
         new anchor.BN(1),
@@ -44,5 +50,47 @@ describe("votingdapp", () => {
       "what is your favorite type of peanut butter?"
     );
     expect(poll.pollStart.toNumber()).toBeLessThan(poll.pollEnd.toNumber());
+  });
+
+  it("Initialize Candidate", async () => {
+    await votingProgram.methods
+      .initializeCandidate(new anchor.BN(1), "smooth")
+      .rpc();
+    await votingProgram.methods
+      .initializeCandidate(new anchor.BN(1), "crunchy")
+      .rpc();
+
+    const [smoothCandidateAddress] = PublicKey.findProgramAddressSync(
+      [new anchor.BN(1).toArrayLike(Buffer, "le", 8), Buffer.from("smooth")],
+      votingAddress
+    );
+    const smoothCandidate = await votingProgram.account.candidate.fetch(
+      smoothCandidateAddress
+    );
+    console.log(smoothCandidate);
+    expect(smoothCandidate.candidateVotes.toNumber()).toEqual(0);
+
+    const [crunchyCandidateAddress] = PublicKey.findProgramAddressSync(
+      [new anchor.BN(1).toArrayLike(Buffer, "le", 8), Buffer.from("crunchy")],
+      votingAddress
+    );
+    const crunchyCandidate = await votingProgram.account.candidate.fetch(
+      crunchyCandidateAddress
+    );
+    console.log(crunchyCandidate);
+    expect(crunchyCandidate.candidateVotes.toNumber()).toEqual(0);
+  });
+
+  it("vote", async () => {
+    await votingProgram.methods.vote(new anchor.BN(1), "crunchy").rpc();
+    const [crunchyCandidateAddress] = PublicKey.findProgramAddressSync(
+      [new anchor.BN(1).toArrayLike(Buffer, "le", 8), Buffer.from("crunchy")],
+      votingAddress
+    );
+    const crunchyCandidate = await votingProgram.account.candidate.fetch(
+      crunchyCandidateAddress
+    );
+    console.log(crunchyCandidate);
+    expect(crunchyCandidate.candidateVotes.toNumber()).toEqual(1);
   });
 });

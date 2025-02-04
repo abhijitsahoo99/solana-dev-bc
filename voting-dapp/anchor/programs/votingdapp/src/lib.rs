@@ -2,7 +2,7 @@
 
 use anchor_lang::prelude::*;
 
-declare_id!("coUnmi3oBUtwtd9fjeAvSsJssXh5A5xyPbhpewyzRVF");
+declare_id!("Brjt1p3xebud9kUxaADeTsGrPzVQsgB69tCYrfJV3Pw");
 
 #[program]
 pub mod votingdapp {
